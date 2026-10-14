@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Daily Habit Tracker</title>
+
+  <!-- Design: css/app.css = base look, css/extras.css = everything added later -->
+  <link rel="stylesheet" href="css/app.css">
+  <link rel="stylesheet" href="css/extras.css">
+</head>
+<body>
+  <!-- The app draws itself inside these two containers -->
+  <div class="app" id="app"></div>
+  <div id="modal"></div>
+
+  <!-- 1) Your Supabase URL and key (edit config.js only) -->
+  <script src="config.js"></script>
+  <!-- 2) Supabase library -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+
+  <!-- 3) Login, admin, top bar and start-up (order matters).
+          The app itself (js/app/*) is loaded by 08-session.js after login. -->
+  <script src="js/boot/00-utils.js"></script>
+  <script src="js/boot/01-supabase.js"></script>
+  <script src="js/boot/02-sound-effects.js"></script>
+  <script src="js/boot/03-login-screen.js"></script>
+  <script src="js/boot/04-dialogs.js"></script>
+  <script src="js/boot/05-admin-panel.js"></script>
+  <script src="js/boot/06-top-bar.js"></script>
+  <script src="js/boot/07-cloud-stats.js"></script>
+  <script src="js/boot/08-session.js"></script>
+</body>
+</html>
