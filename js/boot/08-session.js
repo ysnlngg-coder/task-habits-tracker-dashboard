@@ -38,16 +38,24 @@ function showStartupError(e) {
 }
 /** Start here: login -> approval check -> load your data -> show the app. */
 async function startApp() {
-    const needPw = /type=(invite|recovery)/.test(location.hash);
-    let { data: { session } } = await sb.auth.getSession();
-    if (session && needPw) {
-        await form('Set your password', [['pw', 'password', 'New password (min 8)', 'new-password']], 'Save and continue', async (v, msg) => { if (v.pw.length < 8) {
+    // 'ht_pw' is set right after a reset code is verified, so a refresh can't skip choosing the new password.
+    const needPw = /type=(invite|recovery)/.test(location.hash) || sessionStorage.getItem('ht_pw');
+    const askNewPw = () => form('Set your password', [['pw', 'password', 'New password (min 8)', 'new-password']], 'Save and continue', async (v, msg) => {
+        if (v.pw.length < 8) {
             msg('At least 8 characters');
             return false;
-        } const r = await sb.auth.updateUser({ password: v.pw }); if (r.error) {
+        }
+        const r = await sb.auth.updateUser({ password: v.pw });
+        if (r.error) {
             msg(r.error.message);
             return false;
-        } return true; });
+        }
+        sessionStorage.removeItem('ht_pw');
+        return true;
+    });
+    let { data: { session } } = await sb.auth.getSession();
+    if (session && needPw) {
+        await askNewPw();
         history.replaceState(null, '', location.pathname);
     }
     const lk = 'background:none;border:0;color:var(--mu);margin-top:14px;cursor:pointer;width:100%;font:inherit;font-size:13px;transition:color .2s';
@@ -92,6 +100,10 @@ async function startApp() {
             } localStorage.removeItem('ht_f'); session = y.data.session; return true; }, `<button id="fp" style="${lk}">Forgot password?</button><button id="bk" style="${lk}">Back</button>`);
             if (r === 'in')
                 mode = 'start';
+            else if (r === 'fp') {
+                em = window.__e;
+                mode = 'code';
+            }
         }
         else if (mode === 'nope') {
             const r = await form('No account found', [], 'Create an account', async () => true, `<p style="color:var(--mu)">${esc(em)} is not registered. Check the spelling, or create an account.</p><button id="bk" style="${lk}">Use another email</button>`);
@@ -109,6 +121,60 @@ async function startApp() {
             } localStorage.removeItem('ht_f'); session = x.data.session; return true; }, `<button id="fp" style="${lk}">Forgot password?</button><button id="bk" style="${lk}">Not you? Use another email</button>`);
             if (r === 'in')
                 mode = 'em';
+            else if (r === 'fp') {
+                em = window.__e;
+                mode = 'code';
+            }
+        }
+        else if (mode === 'code') {
+            // Step 1 of "forgot password": the user types the code from our email. Step 2: choose a new password.
+            SUB['Check your email'] = 'If ' + esc(em) + ' has an account, we sent a 6-digit code. It expires in 10 minutes.';
+            const rs = `<button id="rs" style="${lk}" disabled>Resend code</button><button id="bk" style="${lk}">Back to sign in</button>`;
+            const p = form('Check your email', [['cd', 'text', 'Verification code', 'one-time-code']], 'Verify code', async (v, msg) => {
+                const c = v.cd.replace(/\D/g, '');
+                if (c.length !== 6) {
+                    msg('Enter the 6-digit code');
+                    return false;
+                }
+                const w = lockLeft();
+                if (w) {
+                    msg('Too many attempts. Try again in ' + w + 's');
+                    return false;
+                }
+                const x = await sb.auth.verifyOtp({ email: em, token: c, type: 'recovery' });
+                if (x.error || !x.data.session) {
+                    failed();
+                    msg('That code is wrong or expired');
+                    return false;
+                }
+                localStorage.removeItem('ht_f');
+                sessionStorage.setItem('ht_pw', '1');
+                return true;
+            }, rs);
+            // form() builds its HTML synchronously, so the buttons exist right now: wire the code box and "Resend".
+            const ci = ov.querySelector('#cd'), rb = ov.querySelector('#rs'), note = ov.querySelector('#msg');
+            ci.inputMode = 'numeric';
+            ci.maxLength = 7;
+            ci.placeholder = '• • • • • •';
+            ci.oninput = () => { ci.value = ci.value.replace(/\D/g, '').slice(0, 6); if (ci.value.length === 6)
+                ov.querySelector('#go').click(); };
+            let until = Date.now() + 60000;
+            const tick = setInterval(() => { const s = Math.ceil((until - Date.now()) / 1000); rb.disabled = s > 0; rb.textContent = s > 0 ? 'Resend code (' + s + 's)' : 'Resend code'; }, 500);
+            rb.onclick = async () => {
+                rb.disabled = true;
+                until = Date.now() + 60000;
+                const y = await sb.auth.resetPasswordForEmail(em);
+                note.textContent = y.error ? 'Please wait a minute before asking for another code' : 'A new code is on its way';
+                note.className = 'au-msg ' + (y.error ? 'err' : 'info');
+            };
+            const r = await p;
+            clearInterval(tick);
+            if (r === 'in')
+                mode = 'em';
+            else {
+                await askNewPw();
+                session = (await sb.auth.getSession()).data.session;
+            }
         }
         else {
             const t0 = Date.now();

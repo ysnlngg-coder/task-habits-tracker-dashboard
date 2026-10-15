@@ -9,7 +9,7 @@ ov.className = 'au';
 ov.style.cssText = 'position:fixed;inset:0;z-index:99;background:var(--bg);display:grid;place-items:center;padding:20px;font:14px/1.45 -apple-system,"Segoe UI",Roboto,sans-serif;color:var(--tx)';
 document.body.appendChild(ov);
 /** Subtitle shown under each screen title. */
-const SUB = { 'Habit Tracker': 'Your private habit tracker.', 'Sign in': 'Welcome back. Enter your details to continue.', 'Create account': 'Request access to your own private tracker.', 'Set your password': 'Choose a new password for your account.', 'Waiting for approval': 'Your account is awaiting approval.', 'Access removed': 'This account no longer has access.' };
+const SUB = { 'Habit Tracker': 'Your private habit tracker.', 'Sign in': 'Welcome back. Enter your details to continue.', 'Create account': 'Request access to your own private tracker.', 'Set your password': 'Choose a new password for your account.', 'Waiting for approval': 'Your account is awaiting approval.', 'Access removed': 'This account no longer has access.', 'Check your email': '' };
 const fld = (f, i) => `<div class="au-f" style="animation-delay:${.12 + i * .07}s"><label for="${f[0]}">${f[2]}</label><div class="au-w"><input id="${f[0]}" type="${f[1]}" placeholder="${f[2]}" autocomplete="${f[3]}" spellcheck="false"${f[1] === 'password' ? ' class="pwf"' : ''}>${f[1] === 'password' ? '<button type="button" data-eye tabindex="-1">Show</button>' : ''}</div>${f[3] === 'new-password' ? '<div class="au-st"><i></i></div><small class="au-hint">Use 8+ characters with letters and numbers.</small>' : ''}</div>`;
 /** Builds one login-style screen and resolves when the user submits. */
 function form(title, fields, label, fn, extra) {
@@ -37,8 +37,23 @@ function form(title, fields, label, fn, extra) {
             np.oninput = () => { const p = np.value; const sc = (p.length >= 8) + (p.length >= 12) + (/[a-z]/i.test(p) && /\d/.test(p)) + (/[A-Z]/.test(p) && /[^\w\s]/.test(p)); const b = ov.querySelector('.au-st i'); b.style.width = sc * 25 + '%'; b.style.background = ['var(--ac)', '#f97316', '#eab308', '#84cc16', '#22c55e'][sc]; };
         const fp = ov.querySelector('#fp');
         if (fp)
-            fp.onclick = async () => { const e1 = (ov.querySelector('#em') || {}).value || window.__e; if (!e1)
-                return msg('Enter your email first'); const r = await sb.auth.resetPasswordForEmail(e1, { redirectTo: location.origin + location.pathname }); msg(r.error ? r.error.message : 'Check your email for the reset link'); };
+            fp.onclick = async () => {
+                if (fp.disabled)
+                    return;
+                const e1 = (((ov.querySelector('#em') || {}).value) || window.__e || '').trim();
+                if (!/^\S+@\S+\.\S+$/.test(e1))
+                    return msg('Enter your email first');
+                fp.disabled = true;
+                fp.textContent = 'Sending code…';
+                // The email itself is sent by the send-email Edge Function (see supabase-functions/), not by Supabase.
+                const r = await sb.auth.resetPasswordForEmail(e1);
+                fp.disabled = false;
+                fp.textContent = 'Forgot password?';
+                if (r.error)
+                    return msg(/rate|seconds|too many/i.test(r.error.message) ? 'Please wait a minute before asking for another code' : r.error.message);
+                window.__e = e1;
+                ok('fp');
+            };
         const su = ov.querySelector('#su');
         if (su)
             su.onclick = () => ok('su');

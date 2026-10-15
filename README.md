@@ -38,6 +38,7 @@ habit-tracker/
 │      12-main            النقرات، الكتابة، أول رسم (يبقى الأخير)
 ├─ sql/                  ملفات قاعدة البيانات (انظر الترتيب أدناه)
 ├─ ai-assistant/index.ts كود المساعد الذكي (يُنشر في Supabase Edge Functions)
+├─ supabase-functions/send-email/index.ts  رسائل البريد الخاصة بالتراكر (رمز استعادة كلمة المرور…)
 └─ backup/               النسخة القديمة في ملف واحد، للرجوع إليها عند الحاجة
 ```
 
@@ -57,6 +58,8 @@ habit-tracker/
 | ما يراه الأدمن في قائمة الناس | `js/boot/05-admin-panel.js` |
 | رسائل المساعد الذكي وأزراره السريعة | `js/boot/06-top-bar.js` |
 | شخصية المساعد وحدوده ونموذجه | `ai-assistant/index.ts` ← `SYSTEM` و`MODEL` |
+| تصميم ونص رسائل البريد (رمز الاستعادة، التأكيد، الدعوة) | `supabase-functions/send-email/index.ts` ← `layout` و`buildMail` |
+| شاشة إدخال رمز الاستعادة | `js/boot/08-session.js` (`mode === 'code'`) و`css/extras.css` (آخر الملف) |
 | شكل شاشة الدخول أو لوحة الأدمن أو المؤقت | `css/extras.css` (ابحث عن عنوان القسم) |
 | رابط Supabase والمفتاح | `config.js` |
 
@@ -79,6 +82,19 @@ window.HT_CONFIG = {
 6. `setup_v7.sql` ← حدود الحجم والتخزين
 7. `revert_v6.sql` ← **اختياري**: يزيل النقاط والمتصدرين لو كانت مثبتة
 
+## رسائل البريد الخاصة (نسيت كلمة المرور بالرمز)
+بدل رسالة Supabase الافتراضية، تُرسل رسالة بتصميم التراكر فيها **رمز من 6 أرقام**. الخطوات (مرة واحدة):
+
+1. أنشئ حساباً في Resend واربط دومينك (للإرسال لأي إيميل لا لإيميلك فقط)، وخذ `RESEND_API_KEY`.
+2. انشر الدالة: ضع مجلد `supabase-functions/send-email` داخل `supabase/functions/` في مشروعك ثم:
+   `supabase functions deploy send-email --no-verify-jwt`
+3. في Supabase ← Authentication ← Hooks أنشئ **Send Email hook** من نوع HTTPS والصق رابط الدالة، وانسخ السر الذي يظهر (`v1,whsec_...`).
+4. أضف الأسرار:
+   `supabase secrets set SEND_EMAIL_HOOK_SECRET="v1,whsec_..." RESEND_API_KEY="re_..." MAIL_FROM="Habit Tracker <no-reply@yourdomain.com>"`
+5. في إعدادات Auth لمزوّد Email: اجعل طول الرمز **6** ومدة الصلاحية **600 ثانية** (10 دقائق) لتطابق النص في الرسالة والشاشة.
+
+ملاحظة: الـ hook يشمل كل رسائل الـ Auth، لذلك الدالة تتعامل أيضاً مع التأكيد والدعوة بنفس التصميم. إن لم تفعّل الـ hook يبقى كل شيء يعمل برسالة Supabase، لكن شاشة الرمز لن تجد رمزاً في الرسالة.
+
 ## الرفع على الاستضافة
 ارفع **المجلد كله** (`index.html` و`config.js` ومجلدي `css` و`js`)، وليس `index.html` وحده.
 مجلدات `sql` و`backup` و`ai-assistant` لا تحتاج رفعاً.
@@ -87,3 +103,8 @@ window.HT_CONFIG = {
 - عدّل ملفاً واحداً في كل مرة، ثم حدّث الصفحة وجرّب.
 - لو ظهرت شاشة حمراء مكتوب فيها `Startup error` فاسم الملف الذي فيه المشكلة مذكور في الرسالة.
 - لا تغيّر ترتيب ملفات `js/app` ولا ترتيب أقسام `css/extras.css`، فالترتيب مقصود.
+
+## if you forget your habits you can restore him:
+open the tracker with you account click on keyboard "F12", then go to 'console' and write this codes below:
+1. allow pasting
+2. S.habits = DEF().habits; save(); render();

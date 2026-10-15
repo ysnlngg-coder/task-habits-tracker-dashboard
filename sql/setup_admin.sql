@@ -57,4 +57,4 @@ create policy "own music update" on storage.objects for update to authenticated 
 create policy "own music delete" on storage.objects for delete to authenticated using (bucket_id = 'music' and (storage.foldername(name))[1] = auth.uid()::text and public.is_approved());
 
 -- أنت الأدمن
-update public.profiles set role = 'admin', status = 'approved' where email = 'ysnlngg@gmail.com';
+update public.profiles set role = 'admin', status = 'approved' where email = 'ysnlngg@gmail.com', 'hamedhanine17@gmail.com';

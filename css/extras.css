@@ -1586,3 +1586,34 @@ button:active:not(:disabled) {
     animation: none!important;
   }
 }
+
+
+/* ===== Forgot password: verification code screen ===== */
+
+.au-w input#cd {
+  text-align: center;
+  font: 700 26px/1 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  letter-spacing: .45em;
+  padding-left: calc(14px + .45em);
+  height: 56px;
+}
+
+.au-w input#cd::placeholder {
+  font-size: 18px;
+  font-weight: 400;
+  letter-spacing: .3em;
+  opacity: .45;
+}
+
+.au [id=rs] {
+  transition: color .2s, opacity .2s;
+}
+
+.au [id=rs]:disabled {
+  opacity: .55;
+  cursor: default !important;
+}
+
+.au [id=rs]:not(:disabled):hover {
+  color: var(--tx) !important;
+}
