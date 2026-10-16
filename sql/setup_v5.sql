@@ -6,9 +6,10 @@ create table if not exists public.news (
   title text not null check (char_length(title) <= 80),
   body text not null check (char_length(body) <= 1000),
   image_url text,
-  author text not null default 'yacine',
+  author text not null,
   created_at timestamptz not null default now()
 );
+alter table public.news alter column author drop default;
 alter table public.news enable row level security;
 drop policy if exists "approved read news" on public.news;
 drop policy if exists "admin insert news" on public.news;
@@ -44,6 +45,6 @@ as $$ select greatest(p_limit - coalesce((select n from ai_usage where user_id =
 grant execute on function public.ai_use(int), public.ai_left(int) to authenticated;
 
 -- أول رسالة أخبار (يمكنك حذفها من لوحة الأدمن)
-insert into public.news (title, body)
-select 'What''s new', E'✨ Assistant: tap the sparkle icon at the top right to plan your day or get ideas.\n🔔 News: updates from me will appear here.\n🎵 Sound effects: choose which sounds you want in the Music page.\n◎ A cleaner focus timer.'
+insert into public.news (title, body, author)
+select 'What''s new', E'✨ Assistant: tap the sparkle icon at the top right to plan your day or get ideas.\n🔔 News: updates from me will appear here.\n🎵 Sound effects: choose which sounds you want in the Music page.\n◎ A cleaner focus timer.', 'Habit Tracker'
 where not exists (select 1 from public.news);

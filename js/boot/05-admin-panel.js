@@ -49,17 +49,21 @@ async function openAdmin() {
         nbox.hidden = true;
         return;
     } if (!nbox.innerHTML)
-        nbox.innerHTML = `<h3>Post news <small>sent as yacine</small></h3><input id="nt" placeholder="Title" maxlength="80"><textarea id="nb" rows="4" maxlength="1000" placeholder="What's new? Everyone sees this under the bell."></textarea><input id="ni" placeholder="Image link (optional, https://...)"><div class="ad-nf"><span id="nmsg" class="ad-s"></span><button id="np" class="ad-b pri">Publish</button></div><div id="nl"></div>`; nbox.hidden = false; drawNL(); }
+        nbox.innerHTML = `<h3>Post news <small>sent as your admin account</small></h3><input id="nt" placeholder="Title" maxlength="80"><textarea id="nb" rows="4" maxlength="1000" placeholder="What's new? Everyone sees this under the bell."></textarea><input id="ni" placeholder="Image link (optional, https://...)"><div class="ad-nf"><span id="nmsg" class="ad-s"></span><button id="np" class="ad-b pri">Publish</button></div><div id="nl"></div>`; nbox.hidden = false; drawNL(); }
     async function publish(btn) { const t = p.querySelector('#nt').value.trim(), b = p.querySelector('#nb').value.trim(), i = p.querySelector('#ni').value.trim(), m = p.querySelector('#nmsg'); if (!t || !b) {
         m.textContent = 'Title and message are required.';
         return;
     } if (i && !/^https:\/\//i.test(i)) {
         m.textContent = 'Image link must start with https://';
         return;
-    } btn.classList.add('busy'); const r = await sb.from('news').insert({ title: t, body: b, image_url: i || null }); btn.classList.remove('busy'); if (r.error) {
+    } btn.classList.add('busy'); const profile = await sb.from('profiles').select('name').eq('id', userId).maybeSingle(); if (profile.error || !profile.data || !profile.data.name || !profile.data.name.trim()) {
+        btn.classList.remove('busy');
+        m.textContent = profile.error ? profile.error.message : 'Your profile name is missing. Ask an admin to update it.';
+        return;
+    } const author = profile.data.name.trim(), r = await sb.from('news').insert({ title: t, body: b, image_url: i || null, author }); btn.classList.remove('busy'); if (r.error) {
         m.textContent = r.error.message;
         return;
-    } p.querySelector('#nt').value = p.querySelector('#nb').value = p.querySelector('#ni').value = ''; m.textContent = 'Published as yacine ✓'; SFX.play('success'); drawNL(); }
+    } p.querySelector('#nt').value = p.querySelector('#nb').value = p.querySelector('#ni').value = ''; m.textContent = 'Published as ' + author + ' ✓'; SFX.play('success'); drawNL(); }
     const iv = setInterval(load, 3e4);
     async function removeUser(id, name) { if (!await dlg('Remove ' + name + '?', 'This permanently deletes their account, tracker data and music. This cannot be undone.', 'Remove', true))
         return; try {
